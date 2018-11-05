@@ -1,0 +1,48 @@
+---
+title: "MSc_assembly_statws"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## R Markdown
+
+
+```{r cars}
+assemblies <- read.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vSDIzGPYTDV_bQD_90JWCY0ea436EXyzGJqJLoNIGZ4biprvw63624yrUy4dTd_zCegsMAizSruNxoQ/pub?gid=146850885&single=true&output=csv")
+
+# fucking csv includes 1,000,000 commas to delimit thousands
+assemblies$Assembly.N50..pieces..500bp. <- as.numeric(gsub(x = assemblies$Assembly.N50..pieces..500bp., 
+                                                           pattern = ",", 
+                                                           replacement = ""))
+assemblies$Assembly.L50..pieces..500bp. <- as.numeric(gsub(x = assemblies$Assembly.L50..pieces..500bp., 
+                                                           pattern = ",", 
+                                                           replacement = ""))
+assemblies$Total.assembly.size..pieces..500bp. <- as.numeric(gsub(x = assemblies$Total.assembly.size..pieces..500bp., 
+                                                           pattern = ",", 
+                                                           replacement = ""))
+assemblies <- subset(assemblies, !is.na(Assembly.N50..pieces..500bp. ))
+head(assemblies)
+ggplot(assemblies) + geom_histogram(aes(x=Assembly.N50..pieces..500bp., stat="count"), binwidth = 10000) + scale_x_continuous(name = "Assembly N50 length (nucleotides)", labels = scales::comma)
+
+
+ggplot(assemblies) + geom_point(aes(x=Assembly.N50..pieces..500bp., y = Assembly.L50..pieces..500bp., color=Total.assembly.size..pieces..500bp.)) + scale_x_continuous(name = "Assembly N50 length (nucleotides)", labels = scales::comma) +scale_y_log10(name = "Number of contigs >N50", breaks=c(1,10,50,100,500,1000,5000,10000,50000), labels = scales::comma)
+
+
+
+```
+
+## How big are the improvements? 
+
+```{r pressure, echo=TRUE}
+
+max(assemblies$Assembly.N50..pieces..500bp.)/min(assemblies$Assembly.N50..pieces..500bp.)
+max(assemblies$Assembly.L50..pieces..500bp.)/min(assemblies$Assembly.L50..pieces..500bp.)
+  
+```
+
