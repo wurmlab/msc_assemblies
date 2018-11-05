@@ -1,48 +1,83 @@
 ---
-title: "MSc_assembly_statws"
+title: "2018-11 MSc_assembly_stats"
+author: "Yannick Wurm - https://wurmlab.github.io"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
+library(knitr)
 ```
 
-## R Markdown
+## Quick analysis
 
+We gave students one of three datasets (same amount of data; different amounts of cleaning & genetic diversity). Each student performed a genome assembly. 
+
+```{r}
+params <- read.csv("input/AssignmentParametersForScreenshot.csv")
+kable(params)
+```
+
+
+## Results
 
 ```{r cars}
-assemblies <- read.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vSDIzGPYTDV_bQD_90JWCY0ea436EXyzGJqJLoNIGZ4biprvw63624yrUy4dTd_zCegsMAizSruNxoQ/pub?gid=146850885&single=true&output=csv")
+assemblies_raw <- read.csv("input/responses.csv")
 
-# fucking csv includes 1,000,000 commas to delimit thousands
-assemblies$Assembly.N50..pieces..500bp. <- as.numeric(gsub(x = assemblies$Assembly.N50..pieces..500bp., 
-                                                           pattern = ",", 
-                                                           replacement = ""))
-assemblies$Assembly.L50..pieces..500bp. <- as.numeric(gsub(x = assemblies$Assembly.L50..pieces..500bp., 
-                                                           pattern = ",", 
-                                                           replacement = ""))
-assemblies$Total.assembly.size..pieces..500bp. <- as.numeric(gsub(x = assemblies$Total.assembly.size..pieces..500bp., 
-                                                           pattern = ",", 
-                                                           replacement = ""))
-assemblies <- subset(assemblies, !is.na(Assembly.N50..pieces..500bp. ))
+# google's F!*@$&# csv includes 1,000,000 commas to delimit thousands. Need to clean up
+assemblies_raw$n50       <- as.numeric(gsub(x = assemblies_raw$n50, 
+                                        pattern = ",", 
+                                        replacement = ""))
+assemblies_raw$l50        <- as.numeric(gsub(x = assemblies_raw$l50, 
+                                         pattern = ",", 
+                                         replacement = ""))
+assemblies_raw$total_size <- as.numeric(gsub(x = assemblies_raw$total_size, 
+                                         pattern = ",", 
+                                         replacement = ""))
+
+# removing duplicate rows (due to student submitting twice OR using backup dataset)
+# (will also remove any duplicated due to same params being used twice)
+assemblies <- subset(assemblies_raw, subset =  !duplicated(subset(assemblies_raw, select = c(n50, l50, total_size))) )
+
+
 head(assemblies)
-ggplot(assemblies) + geom_histogram(aes(x=Assembly.N50..pieces..500bp., stat="count"), binwidth = 10000) + scale_x_continuous(name = "Assembly N50 length (nucleotides)", labels = scales::comma)
+
+ggplot(assemblies, aes(x = n50)) + geom_histogram(binwidth = 10000) + 
+  scale_x_continuous(name = "Assembly N50 length (nucleotides)", labels = scales::comma)
 
 
-ggplot(assemblies) + geom_point(aes(x=Assembly.N50..pieces..500bp., y = Assembly.L50..pieces..500bp., color=Total.assembly.size..pieces..500bp.)) + scale_x_continuous(name = "Assembly N50 length (nucleotides)", labels = scales::comma) +scale_y_log10(name = "Number of contigs >N50", breaks=c(1,10,50,100,500,1000,5000,10000,50000), labels = scales::comma)
+ggplot(assemblies, aes(x = n50, y = l50, color = total_size, size=total_size)) + geom_point(alpha=0.8) + 
+  scale_x_continuous(name = "Assembly N50 length (nucleotides)", labels = scales::comma) +
+  scale_y_log10(name = "Number of contigs >N50", breaks = c(10,50,100,500,1000,5000,10000,50000), labels = scales::comma)
 
 
 
 ```
+
+Huge impact of assembly params. Some noise in the data - e.g. see variation in overall assembly size which we do not expect. Some of this is likely due to human error, or because assembly didn't finish (e.g. biggest N50 comes from 1 subfolder of spades output). Some noise likely real. 
 
 ## How big are the improvements? 
 
-```{r pressure, echo=TRUE}
+Wow:
+ * From lowest to highest N50: `max(assemblies$n50)/min(assemblies$n50)` fold improvement.  
+ * From lowest to highest L50: `max(assemblies$l50)/min(assemblies$l50)` fold improvement. 
+ * From median (more robust) to highest N50: `max(assemblies$n50)/median(assemblies$n50)` fold improvement.  
+ * From median (more robust) to highest L50: `max(assemblies$l50)/median(assemblies$l50)` fold improvement. 
 
-max(assemblies$Assembly.N50..pieces..500bp.)/min(assemblies$Assembly.N50..pieces..500bp.)
-max(assemblies$Assembly.L50..pieces..500bp.)/min(assemblies$Assembly.L50..pieces..500bp.)
-  
-```
+## Conclusions / Thoughts
+
+Huge impact of assembly params. 
+
+Would be great to see structure of data:
+
+ * by assembler 
+ * by input dataset (cleaning approach)
+ * potentially by kmer size
+ 
+Need to be wary that bigger N50 is not necessarily better. Can we use synteny to (e.g.) terrestris to ensure that the biggest assemblies aren't problematic?
+
+Are we missing 50Mb of data (highly repetitive?) or was flow cytometry incorrect? 
 
